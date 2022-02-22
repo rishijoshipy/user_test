@@ -53,16 +53,14 @@ class UserSignupVIEW(APIView):
             token_pair = TokenObtainPairSerializer()
             refresh = token_pair.get_token(user)
             access = refresh.access_token
-            #auth_login(request,user)
             if User_data.is_auth:
                 otp=User_data.number
                 username=User_data.name
-                #send_to=User_data.county_code+User_data.mob_number
                 Email=User_data.email
                 subject = "Greetingsss...."
                 message =f'Hi {username},Email Verification.'+"\n"+ f'Here your ID :"{user}" and OTP:"{otp}".'
                 print(message)
-                #user_mail_send(subject,message,Email)
+                user_mail_send(subject,message,Email)
                 code = status.HTTP_201_CREATED
                 return Response(success_login(code, "User OTP send to mail successfully)", serializer.data,str(access),str(refresh)),code)      
             else:
@@ -95,7 +93,7 @@ class User_EmailVerify_VIEW(APIView):
                         username=code.name
                         message=f'{username} is Email Verified and user created Successfully'
                         Email=code.email
-                        #user_mail_send(subject,message,Email)
+                        user_mail_send(subject,message,Email)
                         code = status.HTTP_200_OK
                         return Response(success(code,"User Email Verified Successfully",serializer.data),code)
                     else:    
@@ -131,13 +129,11 @@ class MobileDetails_VIEW(APIView):
             code.number=num
             code.otp_expiry_time=otp_expiry_time
             code.save()
-
             serializer.save()
             username=code.name
             message =f'Hi {username},SMS Verification...'+"\n"+ f'Here your ID :"{user}" and OTP:"{code.number}".'
             send_to=code.county_code+code.mob_number
-            Email=code.email
-            #user_send_sms(message,send_to)
+            user_send_sms(message,send_to)
             print(message)
             codes = status.HTTP_201_CREATED
             return Response(success(codes, "Owner details added",serializer.data),codes)
@@ -168,8 +164,7 @@ class User_SMS_Verify_VIEW(APIView):
                         username=code.name
                         message=f'{username} is Verified Successfully'
                         send_to=code.county_code+code.mob_number
-                        Email=code.email
-                        #user_send_sms(message,send_to)
+                        user_send_sms(message,send_to)
                         code = status.HTTP_200_OK
                         return Response(success(code,"User SMS Verified Successfully User Registrations Done..",serializer.data),code)
                     else:    
@@ -211,9 +206,9 @@ class Resend_OtpVIEW(APIView):
                 subject="Resend OTP"
                 message=f'Resend OTP:{number}'
                 Email=code.email
-                #send_to=code.county_code+code.mob_number
-                #user_mail_send(subject,message,Email)
-                #user_send_sms(message,send_to)
+                send_to=code.county_code+code.mob_number
+                user_mail_send(subject,message,Email)
+                user_send_sms(message,send_to)
                 print(message)
                 code = status.HTTP_200_OK
                 return Response(success(code,"OTP Resend Successfully",serializer.data),code)
@@ -270,25 +265,23 @@ class LoginVIEW(APIView):
                 token_pair = TokenObtainPairSerializer()
                 refresh = token_pair.get_token(user)
                 access = refresh.access_token
-                statusloging(user,current_time,access)
-
+    
                 user_data=CustomUser.objects.get(email=user)
                 num=random_number_OTP() 
                 time = datetime.now()
                 current_time = time.replace(tzinfo=utc)
                 otp_expiry_time = exp_time(current_time)
                 user_data.save()
-
-                otp=user_data.number
+                statuslogin(user,otp_expiry_time,access,current_time,num)
+              
                 username=user_data.name
                 Email=user_data.email
                 subject = "Greetingsss...."
-                message =f'Hi {username},Thank you for Registrations.'+"\n"+ f'Here your ID :"{user}" and OTP:"{otp}".'
+                message =f'Hi {username},Mail Verification.'+"\n"+ f'Here your ID :"{user}" and OTP:"{num}".'
                 print(message)
-                #user_mail_send(subject,message,Email)
+                user_mail_send(subject,message,Email)
                 code = status.HTTP_201_CREATED
-                return Response(success_login(code, "OTP send to MAIL Only. Please Verify OTP...)", serializer.data,str(access),str(refresh)),code)      
-
+                return Response(success_login(code, "OTP send to MAIL Only. Please Verify OTP...)",data,str(access),str(refresh)),code)      
             else:
                 return Response("zero codition match")
         else:

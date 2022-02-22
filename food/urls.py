@@ -12,17 +12,19 @@ urlpatterns = [
     #"""First Phase"""
     path('signup',views.UserSignupVIEW.as_view()),
     path('email_two_Auth',views.User_EmailVerify_VIEW.as_view()),
+  
+    #"""Second Phase"""
     path('mobiledetails',views.MobileDetails_VIEW.as_view()),
     path('sms_two_Auth',views.User_SMS_Verify_VIEW.as_view()),
     
-    path('ResendOtp',views.Resend_OtpVIEW.as_view()),
-    #"""Second Phase"""
 
     # #LOGIN AND LOGOUT FOR ANY USER
     path('login',views.LoginVIEW.as_view(),name="login"),
     path('login_verify_twoauth',views.User_Login_Verify_VIEW.as_view()),
     path('logout',views.LogoutVIEW.as_view()),
 
+    path('ResendOtp',views.Resend_OtpVIEW.as_view()),
+  
     #"""user profile"""
     path('profile',views.User_DetailsVIEW.as_view()),
    
