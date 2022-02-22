@@ -324,7 +324,7 @@ class LogoutVIEW(APIView):
             time = datetime.now()
             current_time = time.replace(tzinfo=utc)
             statuslogout(user,current_time)
-            auth_logout(request)
+            auth_logout(request,user)
             code = status.HTTP_200_OK
             return Response(success_logout(code, "Logout SuccessFull"))
         else:
