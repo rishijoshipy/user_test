@@ -233,7 +233,7 @@ class LoginVIEW(APIView):
         print(user)
         if user:    
             if user.is_login:
-                return Response("Please loging after some time because User already loging..")
+                return Response(f"Please loging after some time because User already login."+"\n"+f"session id:{user.sessionid}.")
             
             elif user.is_auth==1:
                 token_pair = TokenObtainPairSerializer()
