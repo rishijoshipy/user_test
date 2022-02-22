@@ -239,33 +239,27 @@ class LoginVIEW(APIView):
                 token_pair = TokenObtainPairSerializer()
                 refresh = token_pair.get_token(user)
                 access = refresh.access_token
-
                 user_data=CustomUser.objects.get(email=user)
                 num=random_number_OTP() 
                 time = datetime.now()
                 current_time = time.replace(tzinfo=utc)
                 otp_expiry_time = exp_time(current_time)
-
                 statuslogin(user,otp_expiry_time,access,current_time,num)
-
                 username=user_data.name
                 send_to=user_data.county_code+user_data.mob_number
                 Email=user_data.email
                 subject = "Greetingsss...."
                 message =f'Hi {username},Thank you for Registrations.'+"\n"+ f'Here your ID :"{user}" and OTP:"{user_data.number}".'
                 print(message)
-                #user_mail_send(subject,message,Email)
-                #user_send_sms(message,send_to)
-
+                user_mail_send(subject,message,Email)
+                user_send_sms(message,send_to)
                 code = status.HTTP_201_CREATED
                 return Response(success_login(code, "OTP send to MAIL,SMS. Please Verify OTP For Login.)", data,str(access),str(refresh)),code)      
-
-
+            
             elif user.is_auth==0:
                 token_pair = TokenObtainPairSerializer()
                 refresh = token_pair.get_token(user)
                 access = refresh.access_token
-    
                 user_data=CustomUser.objects.get(email=user)
                 num=random_number_OTP() 
                 time = datetime.now()
@@ -273,7 +267,6 @@ class LoginVIEW(APIView):
                 otp_expiry_time = exp_time(current_time)
                 user_data.save()
                 statuslogin(user,otp_expiry_time,access,current_time,num)
-              
                 username=user_data.name
                 Email=user_data.email
                 subject = "Greetingsss...."
@@ -296,7 +289,6 @@ class User_Login_Verify_VIEW(APIView):
         user=request.user
         user_otp=request.data["OTP"]
         code=CustomUser.objects.get(email=user)
-           
         time = datetime.now()
         current_time = time.replace(tzinfo=utc)
         session_expiry_time=exp_time_session(code.otp_expiry_time)
@@ -308,7 +300,7 @@ class User_Login_Verify_VIEW(APIView):
                 if serializer.is_valid():
                     serializer.save()
                     access=code.session_id
-                    #auth_login(request,user)
+                    auth_login(request,user)
                     code = status.HTTP_200_OK
                     return Response(success_login(code, "Verified and Login SuccessFull", serializer.data,str(access),str("HII")),code)
                 else:    
@@ -331,7 +323,6 @@ class User_Login_Verify_VIEW(APIView):
 class LogoutVIEW(APIView):
     permission_classes = (IsAuthenticated,)
     def post(self, request):
-
         user=request.user
         if user.is_login and user.is_verify:
             time = datetime.now()
@@ -387,9 +378,7 @@ class AdminUserSign(APIView):
 class AdminUserManager(APIView):
     permission_classes = (IsAuthenticated,adminuserAuthenticationPermission)
     def get(self, request, format=None):  
-        user=request.user
         searched=request.data["Active"]
-
         if searched=="True":
             Emp1 = CustomUser.objects.filter(Q(is_active=True))
             serializer = AdminUserManagerSerializer(Emp1,many=True,context={'request': request})
