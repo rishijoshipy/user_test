@@ -10,8 +10,7 @@ services:
         - .env
        expose:
         - "8000"
-      
-
+        
   nginx:
       image: nginx:alpine
 
@@ -24,8 +23,6 @@ services:
       
       depends_on:
        - myservices
-
-
 
 volumes:
    static:
