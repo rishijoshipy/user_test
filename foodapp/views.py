@@ -113,7 +113,7 @@ class User_EmailVerify_VIEW(APIView):
             code = status.HTTP_200_OK
             return Response(success(code, "Two-Factor-Auth not Avaliable ",user),code)
 
-# """Mobile details add"""
+"""Mobile details add"""
 class MobileDetails_VIEW(APIView):
     permission_classes = [IsAuthenticated,]
 
@@ -315,7 +315,6 @@ class User_Login_Verify_VIEW(APIView):
                 if serializer.is_valid():
                     serializer.save()
                     access=code.session_id
-
                     #auth_login(request,user)
                     code = status.HTTP_200_OK
                     return Response(success_login(code, "Verified and Login SuccessFull", serializer.data,str(access),str("HII")),code)
@@ -341,7 +340,7 @@ class LogoutVIEW(APIView):
     def post(self, request):
 
         user=request.user
-        if user.is_login:
+        if user.is_login and user.is_verify:
             time = datetime.now()
             current_time = time.replace(tzinfo=utc)
             statuslogout(user,current_time)
@@ -351,7 +350,7 @@ class LogoutVIEW(APIView):
         else:
             return Response("not logout")
             
-"""Restorent Owner Profile Update"""
+"""Profile Update"""
 class User_DetailsVIEW(APIView):
     permission_classes = [IsAuthenticated,]
     def get(self, request, format=None):
@@ -391,7 +390,7 @@ class AdminUserSign(APIView):
         code = status.HTTP_404_NOT_FOUND
         return Response(unsuccess(code,serializer.errors),code) 
 
-"""ADMIN MANAGER FOR OWNER/ENDUSER GET,UPDATE,DELETE,SEARCH"""
+"""ADMIN MANAGER FOR  GET,POST,UPDATE"""
 class AdminUserManager(APIView):
     permission_classes = (IsAuthenticated,adminuserAuthenticationPermission)
     def get(self, request, format=None):  
@@ -414,8 +413,8 @@ class AdminUserManager(APIView):
         return Response(serializers.data)
 
     def patch(self, request, format=None):
-        email=request.data["email"]
-        user= CustomUser.objects.filter(Q(user__email=email))
+        emails=request.data["email"]
+        user= CustomUser.objects.filter(Q(email=emails))
         if user:
             data={"is_active":"False"}
             serializer = AdminUserManagerSerializer(user,data=data,context={'user':request.user},partial=True)
