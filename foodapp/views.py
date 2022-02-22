@@ -18,10 +18,6 @@ from .serializers import *
 from .utility import *
 
 from .permissions import *
-
-import stripe
-stripe.api_key=settings.STRIPE_SECRET_KEY
-
 from django.contrib.auth import authenticate,login as auth_login,logout as auth_logout
 
 from datetime import  datetime, timedelta
