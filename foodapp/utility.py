@@ -46,10 +46,13 @@ def success_logout(code,message):
 
 def user_mail_send(subject,message,Email):
     """SEND EMAIL"""
-    email_from = settings.EMAIL_HOST_USER
-    recipient_list = [Email, ]
-    send_mail(subject, message, email_from, recipient_list)
-    print("Email Send")
+    try:
+        email_from = settings.EMAIL_HOST_USER
+        recipient_list = [Email, ]
+        send_mail(subject, message, email_from, recipient_list)
+        print("Email Send")
+    except Exception as e:
+        print(e)
             
 def user_send_sms(message,send_to):
     """SEND SMS"""
