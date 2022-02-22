@@ -80,6 +80,7 @@ def statuslogin(user,exp_time,access_token,time,num):
     user.save()
 
 def statuslogout(user,time):
+    user.is_verify="False"
     user.is_login="False"
     user.session_id=""
     user.session_updated=time
