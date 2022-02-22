@@ -6,7 +6,8 @@ services:
        
        volumes:
         - .:/code
-       
+       env_file:
+        - .env
        expose:
         - "8000"
 
