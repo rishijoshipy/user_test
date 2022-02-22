@@ -5,10 +5,8 @@ from django.conf import settings
 from .models import *
 from django.db.models import Q
 
-import stripe
-stripe.api_key=settings.STRIPE_SECRET_KEY
 from django.core.mail import send_mail
-from django.conf import settings
+
 from twilio.rest import Client
 account_sid =settings.TWILLIO_ACCOUNT_SID
 auth_token =settings.TWILIO_AUTH_TOKEN
@@ -27,13 +25,6 @@ def exp_time(now):
 def exp_time_session(now):
     expired= now+timedelta(minutes=5)
     return expired
-
-def time_save(cuis):
-    for cui in cuis:
-        time=datetime.now()
-        current_time = time.replace(tzinfo=utc)
-        cui.payment_exp_time = exp_time_payment(current_time)
-        cui.save()
 
 def success(code,message,dataser):
     return {"code":code,"message":message,"data":dataser}

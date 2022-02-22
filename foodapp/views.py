@@ -397,12 +397,12 @@ class AdminUserManager(APIView):
         user=request.user
         searched=request.data["Active"]
 
-        if searched==True:
+        if searched=="True":
             Emp1 = CustomUser.objects.filter(Q(is_active=True))
             serializer = AdminUserManagerSerializer(Emp1,many=True,context={'request': request})
             return Response(serializer.data)
 
-        elif searched==False:
+        elif searched=="False":
             Emp1 = CustomUser.objects.filter(Q(is_active=False))
             serializer = AdminUserManagerSerializer(Emp1,many=True,context={'request': request})
             return Response(serializer.data)
