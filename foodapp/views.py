@@ -32,36 +32,29 @@ class UserSignupVIEW(APIView):
         data=request.data
         email = request.data['email']
         password = request.data['password']
-        num=random_number_OTP()
-        time = datetime.now()
-        current_time = time.replace(tzinfo=utc)
-        otp_expiry_time = exp_time(current_time)
-        serializer = UserRegisterSerializer(data=data,context={"number":num,"time":otp_expiry_time})
+        serializer = UserRegisterSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            print("User Created SuccessFully")
+            print("User Created SuccessFully but not Authenticated")
         else:
             code = status.HTTP_404_NOT_FOUND
             return Response(unsuccess(code,serializer.errors),code)        
-        User_data=CustomUser.objects.get(email=email)
+
+        user_data=CustomUser.objects.get(email=email)
+        exp_time_save(user_data)
+        random_number_OTP(user_data)
         user = authenticate(email=email, password=password)
         if user:
             token_pair = TokenObtainPairSerializer()
             refresh = token_pair.get_token(user)
             access = refresh.access_token
-            if User_data.is_auth:
-                otp=User_data.number
-                username=User_data.name
-                Email=User_data.email
-                subject = "Greetingsss...."
-                message =f'Hi {username},Email Verification.'+"\n"+ f'Here your ID :"{user}" and OTP:"{otp}".'
-                print(message)
-                user_mail_send(subject,message,Email)
+            if user_data.is_auth:
+                user_mail_send(user_data)
                 code = status.HTTP_201_CREATED
-                return Response(success_login(code, "User OTP send to mail successfully)", serializer.data,str(access),str(refresh)),code)      
+                return Response(success_login(code, "2-FA is On and OTP send to mail.Please Verify.", serializer.data,str(access),str(refresh)),code)      
             else:
                 code = status.HTTP_201_CREATED
-                return Response(success_login(code, "Two-Factor is Off", serializer.data,str(access),str(refresh)),code)
+                return Response(success_login(code, "2-FA is Off and User is created.", serializer.data,str(access),str(refresh)),code)
         else:
             return Response("user not found")
 
@@ -72,40 +65,26 @@ class User_EmailVerify_VIEW(APIView):
     def patch(self,request,format=None):
         user=request.user
         user_otp=request.data["OTP"]
-        code=CustomUser.objects.get(email=user)
-        
-        if code.is_auth:
+        user_data=CustomUser.objects.get(email=user)
+        if user_data.is_auth:
             time = datetime.now()
             current_time = time.replace(tzinfo=utc)
-            session_expiry_time=exp_time_session(current_time)  
-            if current_time < code.otp_expiry_time:
-                gen_otp=code.number
+            if current_time < user_data.otp_expiry_time:
+                gen_otp=user_data.number
                 if user_otp==gen_otp:
-                    data={"number":"","is_email_verify":"True"}
-                    serializer = Email_VerifySerializer(code,data=data,context={'user':request.user},partial=True)
-                    if serializer.is_valid():
-                        serializer.save()
-                        subject="User Activations"
-                        username=code.name
-                        message=f'{username} is Email Verified and user created Successfully'
-                        Email=code.email
-                        user_mail_send(subject,message,Email)
+                    try:
+                        user_mail_verified(user_data)
                         code = status.HTTP_200_OK
-                        return Response(success(code,"User Email Verified Successfully",serializer.data),code)
-                    else:    
-                        code = status.HTTP_404_NOT_FOUND
-                        return Response(unsuccess(code,serializer.errors),code)
+                        return Response("User Email Verified Successfully",code)
+                    except Exception as e :
+                        print(e)              
                 else:
-                    if current_time< session_expiry_time:
-                        code.delete()
-                        return HttpResponse("User not created Because OTP not validated for long time")
-                    else:
-                        return HttpResponse("wrong OTP")
+                    return HttpResponse("Wrong OTP")
             else:
                 return Response("OTP Expire")
         else:
             code = status.HTTP_200_OK
-            return Response(success(code, "Two-Factor-Auth not Avaliable ",user),code)
+            return Response(success(code, "2-FA is Off",user),code)
 
 """Mobile details add"""
 class MobileDetails_VIEW(APIView):
@@ -114,64 +93,42 @@ class MobileDetails_VIEW(APIView):
     def patch(self, request, format=None):
         user=request.user
         data=request.data
-        code = CustomUser.objects.get(email=user)
+        user_data = CustomUser.objects.get(email=user)
         print(code)
-        num=random_number_OTP()
-        time = datetime.now()
-        current_time = time.replace(tzinfo=utc)
-        otp_expiry_time = exp_time(current_time)
-        serializer = mobileSerializer(code,data=data,context={'user':request.user},partial=True)
+        exp_time_save(user_data)
+        random_number_OTP(user_data)
+        serializer = mobileSerializer(data=data,context={"user":request.user},partial=True)
         if serializer.is_valid():
-            code.number=num
-            code.otp_expiry_time=otp_expiry_time
-            code.save()
             serializer.save()
-            username=code.name
-            message =f'Hi {username},SMS Verification...'+"\n"+ f'Here your ID :"{user}" and OTP:"{code.number}".'
-            send_to=code.county_code+code.mob_number
-            user_send_sms(message,send_to)
-            print(message)
+            user_send_sms(user_data)
             codes = status.HTTP_201_CREATED
-            return Response(success(codes, "Owner details added",serializer.data),codes)
+            return Response(success(codes, "Mobile Details Added and OTP send to mobile.Please Verify.",serializer.data),codes)
         else:    
             code = status.HTTP_404_NOT_FOUND
             return Response(unsuccess(code,serializer.errors),code)
         
 """USer TWo-auth sms verify"""
-class User_SMS_Verify_VIEW(APIView):
+class User_Mobile_Verify_VIEW(APIView):
     permission_classes = (IsAuthenticated,)
 
     def patch(self,request,format=None):
         user=request.user
         user_otp=request.data["OTP"]
-        code=CustomUser.objects.get(email=user)
+        user_data=CustomUser.objects.get(email=user)
         if code.is_auth:
             time = datetime.now()
             current_time = time.replace(tzinfo=utc)
-            session_expiry_time=exp_time_session(code.otp_expiry_time)
-            if current_time < code.otp_expiry_time:
-                gen_otp=code.number
+            if current_time < user_data.otp_expiry_time:
+                gen_otp=user_data.number
                 if user_otp==gen_otp:
-                    data={"number":"","is_sms_verify":"True"}
-                    serializer = SMS_VerifySerializer(code,data=data,context={'user':request.user},partial=True)
-                    if serializer.is_valid():
-                        serializer.save()
-                        subject="User Activations"
-                        username=code.name
-                        message=f'{username} is Verified Successfully'
-                        send_to=code.county_code+code.mob_number
-                        user_send_sms(message,send_to)
+                    try:
+                        user_mobile_verified(user_data)
                         code = status.HTTP_200_OK
-                        return Response(success(code,"User SMS Verified Successfully User Registrations Done..",serializer.data),code)
-                    else:    
-                        code = status.HTTP_404_NOT_FOUND
-                        return Response(unsuccess(code,serializer.errors),code)
-                else:
-                     if current_time< session_expiry_time:
-                        code.delete()
-                        return HttpResponse("User not created Because OTP not validated for long time")
-                     else:
-                        return HttpResponse("wrong OTP")
+                        return Response(success(code,"User Mobile Verified and User Registration Successfully.",serializer.data),code)
+                    except Exception as e :
+                        print(e)              
+                else:                  
+                    return HttpResponse("wrong OTP")
             else:
                 return Response("OTP Expire")     
         else:
@@ -185,31 +142,21 @@ class Resend_OtpVIEW(APIView):
     def patch(self,request,format=None):        
         user=request.user
         if user.is_auth:
-            num=random_number_OTP()
             time = datetime.now()
             current_time = time.replace(tzinfo=utc)
-            T_time = exp_time(current_time)
-            code=CustomUser.objects.get(email=user)
-            if current_time > code.otp_expiry_time:
-                data={"number":num,"otp_expiry_time":T_time}
-                serializer = ResendOTPSerializer(code,data=data,partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                else: 
-                    code = status.HTTP_404_NOT_FOUND
-                    return Response(unsuccess(code,serializer.errors),code)
-                number=code.number
-                subject="Resend OTP"
-                message=f'Resend OTP:{number}'
-                Email=code.email
-                send_to=code.county_code+code.mob_number
-                user_mail_send(subject,message,Email)
-                user_send_sms(message,send_to)
-                print(message)
-                code = status.HTTP_200_OK
-                return Response(success(code,"OTP Resend Successfully",serializer.data),code)
+            user_data=CustomUser.objects.get(email=user)
+            if current_time>user_data.otp_expiry_time:
+                try:
+                    exp_time_save(user_data)
+                    random_number_OTP(user_data)
+                    user_mail_send(user_data)
+                    user_send_sms(user_data)
+                    code = status.HTTP_200_OK
+                    return Response("OTP Resend Successfully",code)
+                except Exception as e :
+                    print(e)              
             else:
-                return Response("Try Afer Some Time")
+                return Response("Try Afer Some Time,OTP not expired")
         else:
             code = status.HTTP_200_OK
             return Response(success(code, "Two-Factor-Auth not Avaliable ",user),code)
@@ -219,116 +166,80 @@ class LoginVIEW(APIView):
     
     def post(self,request,format=None):
         data = request.data
-
         email = request.data['email']
         password = request.data['password']
-        time = datetime.now()
-        current_time = time.replace(tzinfo=utc)
-        otp_expiry_time = exp_time(current_time)
         user = authenticate(email=email, password=password)
         print(user)
-        if user:    
+        if user and user.is_email_verify and user.is_sms_verify and user.is_active:
             if user.is_login:
-                return Response(f"Please loging after some time because User already login."+"\n"+f"session id:{user.sessionid}.")
-            
-            elif user.is_auth==1:
-                token_pair = TokenObtainPairSerializer()
-                refresh = token_pair.get_token(user)
-                access = refresh.access_token
-                user_data=CustomUser.objects.get(email=user)
-                num=random_number_OTP() 
-                time = datetime.now()
-                current_time = time.replace(tzinfo=utc)
-                otp_expiry_time = exp_time(current_time)
-                statuslogin(user,otp_expiry_time,access,current_time,num)
-                username=user_data.name
-                send_to=user_data.county_code+user_data.mob_number
-                Email=user_data.email
-                subject = "Greetingsss...."
-                message =f'Hi {username},Thank you for Registrations.'+"\n"+ f'Here your ID :"{user}" and OTP:"{user_data.number}".'
-                print(message)
-                user_mail_send(subject,message,Email)
-                user_send_sms(message,send_to)
-                code = status.HTTP_201_CREATED
-                return Response(success_login(code, "OTP send to MAIL,SMS. Please Verify OTP For Login.)", data,str(access),str(refresh)),code)      
-            
-            elif user.is_auth==0:
-                token_pair = TokenObtainPairSerializer()
-                refresh = token_pair.get_token(user)
-                access = refresh.access_token
-                user_data=CustomUser.objects.get(email=user)
-                num=random_number_OTP() 
-                time = datetime.now()
-                current_time = time.replace(tzinfo=utc)
-                otp_expiry_time = exp_time(current_time)
-                user_data.save()
-                statuslogin(user,otp_expiry_time,access,current_time,num)
-                username=user_data.name
-                Email=user_data.email
-                subject = "Greetingsss...."
-                message =f'Hi {username},Mail Verification.'+"\n"+ f'Here your ID :"{user}" and OTP:"{num}".'
-                print(message)
-                user_mail_send(subject,message,Email)
-                code = status.HTTP_201_CREATED
-                return Response(success_login(code, "OTP send to MAIL Only. Please Verify OTP...)",data,str(access),str(refresh)),code)      
+                return Response(f"User already login."+"\n"+f"session id:{user.session_id}.")
             else:
-                return Response("zero codition match")
+                token_pair = TokenObtainPairSerializer()
+                refresh = token_pair.get_token(user)
+                access = refresh.access_token
+                exp_time_save(user)
+                random_number_OTP(user)
+                statuslogin(user,access)
+                if user.is_auth:
+                    try:  
+                        user_mail_send(user)
+                        user_send_sms(user)
+                        code = status.HTTP_201_CREATED
+                        return Response(success_login(code, "2-FA Login is On. Please Verify.", data,str(access),str(refresh)),code)      
+                    except Exception as e:
+                        print(e)
+                else:
+                    try:
+                        user_mail_send(user)
+                        code = status.HTTP_201_CREATED
+                        return Response(success_login(code, "2-FA Login is Off. Please Verify.", data,str(access),str(refresh)),code)      
+                    except Exception as e:
+                        print(e)            
         else:
-            code = status.HTTP_404_NOT_FOUND
-            return Response(unsuccess(code,"Fail"),code)
+            return Response("User not found/verified with mail/mobile")    
 
 """USer TWo-auth sms verify"""
 class User_Login_Verify_VIEW(APIView):
     permission_classes = (IsAuthenticated,)
 
     def patch(self,request,format=None):
-        user=request.user
+        user_data=request.user
         user_otp=request.data["OTP"]
-        code=CustomUser.objects.get(email=user)
         time = datetime.now()
         current_time = time.replace(tzinfo=utc)
-        session_expiry_time=exp_time_session(code.otp_expiry_time)
-        if current_time< code.otp_expiry_time:
+        if current_time< user_data.otp_expiry_time:
             gen_otp=code.number
             if user_otp==gen_otp:
-                data={"number":"","is_verify":"True"}
-                serializer = Login_VerifySerializer(code,data=data,context={'user':request.user},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    access=code.session_id
-                    auth_login(request,user)
+                try:
+                    user_verified(user_data)
+                    #add login details{session}
+                    auth_login(request,user_data)
                     code = status.HTTP_200_OK
-                    return Response(success_login(code, "Verified and Login SuccessFull", serializer.data,str(access),str("HII")),code)
-                else:    
-                    code = status.HTTP_404_NOT_FOUND
-                    return Response(unsuccess(code,serializer.errors),code)
+                    return Response("Verified and Login Successfully",code)
+                except Exception as e:
+                    print(e)
             else:
-                return HttpResponse("wrong OTP")
+                return Response("wrong OTP")
         else:
-            if current_time<session_expiry_time:
-                data={"session_id":"","is_verify":"False","is_login":"False"}
-                serializer = Login_VerifySerializer(code,data=data,context={'user':request.user},partial=True)
-                if serializer.is_valid():
-                    serializer.save()
-                    code = status.HTTP_200_OK
-                    return Response(success_login(code, "Not Verified and Login UnsuccessFull", serializer.data,str(access),str("HII")),code)
-            else:
-                return Response("OTP Expire")
+            return Response("OTP Expire")
 
 """User logout API"""
 class LogoutVIEW(APIView):
     permission_classes = (IsAuthenticated,)
     def post(self, request):
         user=request.user
-        if user.is_login and user.is_verify:
-            time = datetime.now()
-            current_time = time.replace(tzinfo=utc)
-            statuslogout(user,current_time)
-            auth_logout(request,user)
-            code = status.HTTP_200_OK
-            return Response(success_logout(code, "Logout SuccessFull"))
+        if user.is_login and user.is_verify and user.is_active:
+            try:
+                time = datetime.now()
+                current_time = time.replace(tzinfo=utc)
+                statuslogout(user,current_time)
+                auth_logout(request)
+                code = status.HTTP_200_OK
+                return Response("Logout SuccessFull",code)
+            except Exception as e:
+                print(e)
         else:
-            return Response("not logout")
+            return Response("Please, Login /Verify")
             
 """Profile Update"""
 class User_DetailsVIEW(APIView):
@@ -342,13 +253,12 @@ class User_DetailsVIEW(APIView):
     def patch(self, request, format=None):
         data = request.data
         user=request.user
-        user1 = CustomUser.objects.get(email=user)
-        print(user1)
-        serializer = userSerializer(user1,data=data,context={'user':request.user},partial=True)
-        if serializer.is_valid():
-            serializer.save()
-            code = status.HTTP_200_OK
-            return Response(success(code, "Owner details added",serializer.data),code)
+        if user.is_login and user.is_verify:
+            serializer = userSerializer(user,data=data,partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                code = status.HTTP_200_OK
+                return Response(success(code, "user details added",serializer.data),code)
         else:    
             code = status.HTTP_404_NOT_FOUND
             return Response(unsuccess(code,serializer.errors),code)
@@ -368,7 +278,7 @@ class AdminUserSign(APIView):
             code = status.HTTP_201_CREATED
             return Response(success(code, "Admin Created", serializer.data),code)
         code = status.HTTP_404_NOT_FOUND
-        return Response(unsuccess(code,serializer.errors),code) 
+        return Response(unsuccess(code,serializer.errors),code)
 
 """ADMIN MANAGER FOR  GET,POST,UPDATE"""
 class AdminUserManager(APIView):
@@ -377,18 +287,24 @@ class AdminUserManager(APIView):
         searched=request.data["Active"]
         if searched=="True":
             Emp1 = CustomUser.objects.filter(Q(is_active=True))
-            serializer = AdminUserManagerSerializer(Emp1,many=True,context={'request': request})
+            serializer = AdminUserManagerSerializer(Emp1,many=True)
             return Response(serializer.data)
 
         elif searched=="False":
             Emp1 = CustomUser.objects.filter(Q(is_active=False))
-            serializer = AdminUserManagerSerializer(Emp1,many=True,context={'request': request})
+            serializer = AdminUserManagerSerializer(Emp1,many=True)
             return Response(serializer.data)
 
     def post(self, request,format=None):
-        isadmin= CustomUser.objects.filter(Q(is_login=True))
-        serializers = AdminUserManagerSerializer(isadmin,many=True)
-        return Response(serializers.data)
+        searched=request.data["Active"]
+        if searched=="True":
+            isadmin= CustomUser.objects.filter(Q(is_login=True))
+            serializers = AdminUserManagerSerializer(isadmin,many=True)
+            return Response(serializers.data)
+        elif searched=="False":
+            isadmin= CustomUser.objects.filter(Q(is_login=False))
+            serializers = AdminUserManagerSerializer(isadmin,many=True)
+            return Response(serializers.data)
 
     def patch(self, request, format=None):
         emails=request.data["email"]
@@ -404,4 +320,3 @@ class AdminUserManager(APIView):
                 return Response("data not valid")
         else:
             return Response("user not found")
-    

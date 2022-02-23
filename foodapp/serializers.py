@@ -19,13 +19,9 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     
     def create(self, validated_data):
         password = validated_data['password']  
-        num = self.context["number"]
-        time=self.context["time"]
         user=CustomUser.objects.create_user(email=validated_data['email'],
                                     name=validated_data['name'],
-                                    is_auth=validated_data['is_auth'],
-                                    number=num,
-                                    otp_expiry_time=time,
+                                    is_auth=validated_data['is_auth']
                                     )
         user.set_password(password)
         user.save()
@@ -34,10 +30,8 @@ class UserRegisterSerializer(serializers.ModelSerializer):
     def validate(self, data):
         email=data.get('email')
         name =  data.get('name')
-        last_name = data.get('last_name')
         password = data.get('password')
         confirm_password = data.get('confirm_password')
-        
         if not email[0].isalpha():
             raise serializers.ValidationError({"email" : ["Enter a valid email address."]})
         
@@ -45,20 +39,6 @@ class UserRegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError({"confirm_password":["Those passwords don't match."]})
 
         return data
-
-"""TWO-auth Email_Verify"""
-class Email_VerifySerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model=CustomUser
-        fields=("is_email_verify","number","otp_expiry_time",)
-
-    def update(self, instance, validated_data):
-        instance.number = validated_data.get('number', instance.number)
-        instance.otp_expiry_time = validated_data.get('otp_expiry_time', instance.otp_expiry_time)        
-        instance.is_email_verify = validated_data.get('is_email_verify', instance.is_verify)
-        instance.save()
-        return instance
 
 """User Mobile and code serializer"""
 class mobileSerializer(serializers.ModelSerializer):
@@ -68,35 +48,12 @@ class mobileSerializer(serializers.ModelSerializer):
         fields=('mob_number','county_code')
 
     def update(self, instance, validated_data):
+        number = self.context["number"]
+        otp_expiry_time=self.context["time"]
+        instance.number = validated_data.get('number', instance.number)
+        instance.otp_expiry_time = validated_data.get('otp_expiry_time', instance.otp_expiry_time)
         instance.mob_number = validated_data.get('mob_number', instance.mob_number)
         instance.county_code = validated_data.get('county_code', instance.county_code)
-        instance.save()
-        return instance
-
-"""TWO-auth mobile_Verify"""
-class SMS_VerifySerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model=CustomUser
-        fields=("is_sms_verify","number","otp_expiry_time",)
-
-    def update(self, instance, validated_data):
-        instance.number = validated_data.get('number', instance.number)
-        instance.otp_expiry_time = validated_data.get('otp_expiry_time', instance.otp_expiry_time)        
-        instance.is_sms_verify = validated_data.get('is_sms_verify', instance.is_sms_verify)
-        instance.save()
-        return instance
-
-class Login_VerifySerializer(serializers.ModelSerializer):
-    
-    class Meta:
-        model=CustomUser
-        fields=("is_verify","number","otp_expiry_time",)
-
-    def update(self, instance, validated_data):
-        instance.number = validated_data.get('number', instance.number)
-        instance.otp_expiry_time = validated_data.get('otp_expiry_time', instance.otp_expiry_time)        
-        instance.is_verify = validated_data.get('is_verify', instance.is_verify)
         instance.save()
         return instance
 

@@ -15,7 +15,7 @@ urlpatterns = [
   
     #"""Second Phase"""
     path('mobiledetails',views.MobileDetails_VIEW.as_view()),
-    path('sms_two_Auth',views.User_SMS_Verify_VIEW.as_view()),
+    path('sms_two_Auth',views.User_Mobile_Verify_VIEW.as_view()),
     
 
     # #LOGIN AND LOGOUT FOR ANY USER

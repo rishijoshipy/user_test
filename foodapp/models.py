@@ -56,8 +56,3 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users'
-
-
-
-
-
