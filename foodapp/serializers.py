@@ -48,10 +48,6 @@ class mobileSerializer(serializers.ModelSerializer):
         fields=('mob_number','county_code')
 
     def update(self, instance, validated_data):
-        number = self.context["number"]
-        otp_expiry_time=self.context["time"]
-        instance.number = validated_data.get('number', instance.number)
-        instance.otp_expiry_time = validated_data.get('otp_expiry_time', instance.otp_expiry_time)
         instance.mob_number = validated_data.get('mob_number', instance.mob_number)
         instance.county_code = validated_data.get('county_code', instance.county_code)
         instance.save()
@@ -72,26 +68,39 @@ class ResendOTPSerializer(serializers.ModelSerializer):
 
 
 
+from rest_framework.serializers import Serializer, FileField
 """Owner User update res_name,city,res_address"""
 class userSerializer(serializers.ModelSerializer):
-     
+    image = FileField()
     class Meta:
         model=CustomUser
-        fields=('first_name','last_name','age','city_name','state_name','country_name','profession','hobbies')
+        fields=('first_name','last_name','image','age','city_name','state_name','country_name','profession','hobbies')
 
     def update(self, instance, validated_data):
         instance.first_name = validated_data.get('first_name', instance.first_name)
         instance.last_name = validated_data.get('last_name', instance.last_name)
         instance.age = validated_data.get('age', instance.age)
-        
         instance.city_name = validated_data.get('city_name', instance.city_name)
         instance.state_name = validated_data.get('state_name', instance.state_name)
         instance.country_name = validated_data.get('country_name', instance.country_name)
         instance.profession = validated_data.get('profession', instance.profession)
-        instance.profession = validated_data.get('profession', instance.profession)
         instance.hobbies = validated_data.get('hobbies', instance.hobbies)
         instance.save()
         return instance
+ 
+"""user profile pic api"""
+class userprofileSerializer(serializers.ModelSerializer):
+    image = FileField()
+    class Meta:
+        model=CustomUser
+        fields=('email','image',)
+    
+    def update(self, instance, validated_data):
+        instance.image = validated_data.get('image', instance.image)
+        instance.save()
+        return instance
+
+   
 
 """ADMIN SIGNUP"""
 class AdminUserRegisterSerializer(serializers.ModelSerializer):

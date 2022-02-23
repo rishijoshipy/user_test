@@ -3,7 +3,6 @@ from django.urls import path, include
 from django.contrib import admin
 
 from foodapp import views
-
 from rest_framework_simplejwt import views as jv
 
 urlpatterns = [
@@ -17,7 +16,6 @@ urlpatterns = [
     path('mobiledetails',views.MobileDetails_VIEW.as_view()),
     path('sms_two_Auth',views.User_Mobile_Verify_VIEW.as_view()),
     
-
     # #LOGIN AND LOGOUT FOR ANY USER
     path('login',views.LoginVIEW.as_view(),name="login"),
     path('login_verify_twoauth',views.User_Login_Verify_VIEW.as_view()),
@@ -27,9 +25,11 @@ urlpatterns = [
   
     #"""user profile"""
     path('profile',views.User_DetailsVIEW.as_view()),
-   
+    path('profilepic',views.User_ProfilePicVIEW.as_view()),
 
     #""ADMIN PANEL SIGNUP AND MANAGER""
     path('adminsignup',views.AdminUserSign.as_view()),
     path('adminmanager', views.AdminUserManager.as_view()),
+    #path('', include(router.urls)),
   ]
+  

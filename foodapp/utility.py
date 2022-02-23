@@ -22,13 +22,12 @@ def random_number_OTP(user):
         num=random.choice(number_list)
         code_items.append(num)
     code_string="".join(str(item) for item in code_items)
-    user.numbers=code_string
+    user.number=code_string
     user.save()
 
 utc=pytz.UTC
 def exp_time_save(user):
     time = datetime.now()
-   
     current_time = time.replace(tzinfo=utc)
     user.otp_expiry_time = current_time+timedelta(seconds=60)
     user.save()
@@ -78,24 +77,26 @@ def user_mobile_verified(user):
 
 def user_verified(user):
     user.number=""
+    user.is_login="True"
     user.is_verify="True"
     user.save()
     print("User verified")
 
-def statuslogin(user,access_token,time):
+def statuslogin(user,access_token):
     time = datetime.now()
     current_time = time.replace(tzinfo=utc)
-    user.is_login="True"
     user.session_id=access_token
-    user.session_create=time
+    user.session_create=current_time
     user.save()
 
 
-def statuslogout(user,time):
-    user.is_verify="False"
+def statuslogout(user,access_token):
+    time = datetime.now()
+    current_time = time.replace(tzinfo=utc)
     user.is_login="False"
+    user.is_verify="False"
     user.session_id=""
-    user.session_updated=time
+    user.session_updated=current_time
     user.save()
 
 def success(code,message,dataser):
@@ -104,5 +105,17 @@ def success(code,message,dataser):
 def unsuccess(code,dataser):
     message = "Data Error...Bad Reuest!"
     return {"code":code,"message":message,"data":dataser}
+
+def success_login(code,message,dataser,access,refresh):
+    data = {
+        "user" : dataser,
+        "access_token":access,
+        "refresh_token":refresh
+    }
+    return {"code":code,"message":message,"data":data}
+
+def success_logout(code,message):
+    return {"code":code,"message":message}
+
 
 

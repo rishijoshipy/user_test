@@ -5,11 +5,21 @@ import os
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
+from pathlib import Path
+import os
+
+from decouple import Config, RepositoryEnv
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
+DOTENV_FILE = os.path.join(BASE_DIR,'.env')
+env_config = Config(RepositoryEnv(DOTENV_FILE))
+
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/2.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv("SECRET_KEY")
+SECRET_KEY = env_config("SECRET_KEY")
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -120,9 +130,9 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = "/static/"
-
 STATIC_ROOT = './static/'
-
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media/')
 from datetime import timedelta
 
 SIMPLE_JWT = {
@@ -154,27 +164,20 @@ SIMPLE_JWT = {
     'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(minutes=2),
 }
 
-
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
             'rest_framework_simplejwt.authentication.JWTAuthentication',
          ]
 }
 
-STRIPE_SECRET_KEY = os.getenv("STRIPE_SECRET_KEY")
-STRIPE_PUBLISHABLE_KEY = os.getenv("STRIPE_PUBLISHABLE_KEY")
-
-
-
-
 import os
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_USE_TLS = True
 EMAIL_PORT = 587
-EMAIL_HOST_USER =os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+EMAIL_HOST_USER =env_config("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = env_config("EMAIL_HOST_PASSWORD")
 
-TWILLIO_ACCOUNT_SID = os.getenv("TWILLIO_ACCOUNT_SID")
-TWILIO_AUTH_TOKEN = os.getenv("TWILIO_AUTH_TOKEN") 
-TWILIO_SERVICE_SID=os.getenv("TWILIO_SERVICE_SID")     
+TWILLIO_ACCOUNT_SID =env_config("TWILLIO_ACCOUNT_SID")
+TWILIO_AUTH_TOKEN = env_config("TWILIO_AUTH_TOKEN") 
+TWILIO_SERVICE_SID=env_config("TWILIO_SERVICE_SID")     

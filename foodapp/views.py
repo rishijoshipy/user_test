@@ -1,5 +1,7 @@
 import re
 import json
+from urllib import response
+from wsgiref.util import request_uri
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import render, redirect
 
@@ -49,7 +51,8 @@ class UserSignupVIEW(APIView):
             refresh = token_pair.get_token(user)
             access = refresh.access_token
             if user_data.is_auth:
-                user_mail_send(user_data)
+                #user_mail_send(user_data)
+                print("mail send")
                 code = status.HTTP_201_CREATED
                 return Response(success_login(code, "2-FA is On and OTP send to mail.Please Verify.", serializer.data,str(access),str(refresh)),code)      
             else:
@@ -94,13 +97,13 @@ class MobileDetails_VIEW(APIView):
         user=request.user
         data=request.data
         user_data = CustomUser.objects.get(email=user)
-        print(code)
+        print(user_data)
         exp_time_save(user_data)
         random_number_OTP(user_data)
-        serializer = mobileSerializer(data=data,context={"user":request.user},partial=True)
+        serializer = mobileSerializer(user_data,data=data,partial=True)
         if serializer.is_valid():
             serializer.save()
-            user_send_sms(user_data)
+            #user_send_sms(user_data)
             codes = status.HTTP_201_CREATED
             return Response(success(codes, "Mobile Details Added and OTP send to mobile.Please Verify.",serializer.data),codes)
         else:    
@@ -115,7 +118,7 @@ class User_Mobile_Verify_VIEW(APIView):
         user=request.user
         user_otp=request.data["OTP"]
         user_data=CustomUser.objects.get(email=user)
-        if code.is_auth:
+        if user_data.is_auth:
             time = datetime.now()
             current_time = time.replace(tzinfo=utc)
             if current_time < user_data.otp_expiry_time:
@@ -124,11 +127,12 @@ class User_Mobile_Verify_VIEW(APIView):
                     try:
                         user_mobile_verified(user_data)
                         code = status.HTTP_200_OK
-                        return Response(success(code,"User Mobile Verified and User Registration Successfully.",serializer.data),code)
+                        return Response("User Mobile Verified and User Registration Successfully.",code)
+                    
                     except Exception as e :
                         print(e)              
                 else:                  
-                    return HttpResponse("wrong OTP")
+                    return Response("wrong OTP")
             else:
                 return Response("OTP Expire")     
         else:
@@ -149,8 +153,8 @@ class Resend_OtpVIEW(APIView):
                 try:
                     exp_time_save(user_data)
                     random_number_OTP(user_data)
-                    user_mail_send(user_data)
-                    user_send_sms(user_data)
+                    #user_mail_send(user_data)
+                    #user_send_sms(user_data)
                     code = status.HTTP_200_OK
                     return Response("OTP Resend Successfully",code)
                 except Exception as e :
@@ -166,6 +170,7 @@ class LoginVIEW(APIView):
     
     def post(self,request,format=None):
         data = request.data
+        user_req=request.user
         email = request.data['email']
         password = request.data['password']
         user = authenticate(email=email, password=password)
@@ -182,8 +187,9 @@ class LoginVIEW(APIView):
                 statuslogin(user,access)
                 if user.is_auth:
                     try:  
-                        user_mail_send(user)
-                        user_send_sms(user)
+                        #user_mail_send(user)
+                        #user_send_sms(user)
+                        auth_login(request,user)
                         code = status.HTTP_201_CREATED
                         return Response(success_login(code, "2-FA Login is On. Please Verify.", data,str(access),str(refresh)),code)      
                     except Exception as e:
@@ -196,7 +202,7 @@ class LoginVIEW(APIView):
                     except Exception as e:
                         print(e)            
         else:
-            return Response("User not found/verified with mail/mobile")    
+            return Response("User not found/verified with mail/mobile") 
 
 """USer TWo-auth sms verify"""
 class User_Login_Verify_VIEW(APIView):
@@ -208,12 +214,12 @@ class User_Login_Verify_VIEW(APIView):
         time = datetime.now()
         current_time = time.replace(tzinfo=utc)
         if current_time< user_data.otp_expiry_time:
-            gen_otp=code.number
+            gen_otp=user_data.number
             if user_otp==gen_otp:
                 try:
                     user_verified(user_data)
                     #add login details{session}
-                    auth_login(request,user_data)
+                    
                     code = status.HTTP_200_OK
                     return Response("Verified and Login Successfully",code)
                 except Exception as e:
@@ -228,18 +234,19 @@ class LogoutVIEW(APIView):
     permission_classes = (IsAuthenticated,)
     def post(self, request):
         user=request.user
-        if user.is_login and user.is_verify and user.is_active:
-            try:
-                time = datetime.now()
-                current_time = time.replace(tzinfo=utc)
-                statuslogout(user,current_time)
-                auth_logout(request)
-                code = status.HTTP_200_OK
-                return Response("Logout SuccessFull",code)
-            except Exception as e:
-                print(e)
+        if user.is_login and user.is_verify :
+            if user.is_active:
+                try:
+                    statuslogout(user,user.session_id)
+                    auth_logout(request)
+                    code = status.HTTP_200_OK
+                    return Response("Logout SuccessFull",code)
+                except Exception as e:
+                    print(e)
+            else:
+                return Response("user is block")
         else:
-            return Response("Please, Login /Verify")
+            return Response("Please, Login")
             
 """Profile Update"""
 class User_DetailsVIEW(APIView):
@@ -261,7 +268,30 @@ class User_DetailsVIEW(APIView):
                 return Response(success(code, "user details added",serializer.data),code)
         else:    
             code = status.HTTP_404_NOT_FOUND
-            return Response(unsuccess(code,serializer.errors),code)
+            return Response(unsuccess(code,"Login required"),code)
+
+class User_ProfilePicVIEW(APIView):
+    permission_classes = [IsAuthenticated,]
+    def get(self, request, format=None):
+        user=request.user
+        user_data = CustomUser.objects.get(email=user)
+        serializer =  userprofileSerializer(user_data)
+        return Response(serializer.data)
+
+    def patch(self, request, format=None):
+        file_uploaded = request.FILES.get('image')
+        user=request.user
+        data={"image":file_uploaded}
+        if user.is_login and user.is_verify:
+            serializer =  userprofileSerializer(user,data=data,partial=True)
+            if serializer.is_valid():
+                serializer.save()
+                code = status.HTTP_200_OK
+                return Response(success(code, "user profile pic added",serializer.data),code)
+        else:    
+            code = status.HTTP_404_NOT_FOUND
+            return Response(unsuccess(code,"Login required"),code)
+
 
 """Admin User Signup"""
 class AdminUserSign(APIView):

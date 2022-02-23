@@ -6,3 +6,5 @@ psycopg2
 gunicorn==19.6.0
 twilio
 pytz
+python-decouple
+pillow

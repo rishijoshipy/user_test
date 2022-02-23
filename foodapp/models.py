@@ -10,6 +10,8 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     first_name = models.CharField(max_length=255,null=True,blank=True)
     last_name = models.CharField(max_length=255,blank=True,null=True)
+    image = models.ImageField(upload_to='images')
+
     age=models.IntegerField(blank=True,null=True)
     city_name=models.CharField(max_length=50,  blank=True,null=True)
     state_name =models.CharField(max_length=50,  blank=True,null=True)
@@ -35,9 +37,7 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
     number = models.CharField(max_length=5,blank=True)#OTP
     otp_expiry_time = models.DateTimeField(null=True)
 
-    session_id= models.CharField(max_length=50,  blank=True,null=True)
-    session_create=models.DateTimeField(null=True)
-    session_updated=models.DateTimeField(null=True)
+   
 
     
     """user login as email"""
@@ -56,3 +56,14 @@ class CustomUser(AbstractBaseUser, PermissionsMixin):
 
     class Meta:
         db_table = 'users'
+
+class userlog(models.Model):
+    user = models.ForeignKey(CustomUser,on_delete=models.CASCADE)
+    status = models.IntegerField(null=True)
+    session_id= models.CharField(max_length=50,  blank=True,null=True)
+    session_create=models.DateTimeField(null=True)
+    session_updated=models.DateTimeField(null=True)
+
+    def __str__(self):
+        return str(self.user)
+  
